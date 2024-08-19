@@ -2,7 +2,9 @@
 
 .PHONY: build test-build test-run
 build: clean
-	@ mkdir build && gcc -std=c99 -Wall -Wextra -pedantic-errors main.c -o build/cbangc && echo 'Compilation successful.\nC! Compiler v0.0.1\nRun it with ./build/cbangc\n-----------------\n'
+	@ mkdir build && gcc -std=c11 -Wall -Wextra -Wswitch -Werror=switch -pedantic-errors main.c q_ast.c ast.c -o build/cbangc && echo 'Compilation successful.\nC! Compiler v0.0.1\nRun it with ./build/cbangc\n-----------------\n'
+run: clean
+	@mkdir build && gcc -std=c11 -Wall -Wextra -Wswitch -Werror=switch -pedantic-errors main.c q_ast.c ast.c -o build/cbangc && ./build/cbangc
 
 clean:
 	@rm -rf build
