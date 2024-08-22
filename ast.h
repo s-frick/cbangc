@@ -5,113 +5,63 @@
 #include <stdint.h>
 #include <string.h>
 
-typedef char Qsigil; // : $ % @
+#include "array.h"
 
-// Extended types QBE
-typedef int8_t Qbyte; // => b
-typedef int16_t Qhalf; // => h
+#define GENERATE_ENUM(ENUM, STRING, STRUCT) ENUM,
+#define GENERATE_STRING(ENUM, STRING, STRUCT) #STRING,
+#define GENERATE_TYPEDEF(ENUM, STRING, STRUCT) typedef struct ENUM ENUM##_t;
+#define GENERATE_STRUCT(ENUM, STRING, STRUCT) struct ENUM STRUCT ENUM;
 
-#define GENERATE_ENUM(ENUM, STRING) ENUM,
-#define GENERATE_STRING(ENUM, STRING) #STRING,
 
-#define FOREACH_Q_TYPE(Q_TYPE) \
-    Q_TYPE(Qword, w) \
-    Q_TYPE(Qlong, l) \
-    Q_TYPE(Qsingle, s) \
-    Q_TYPE(Qdouble, d) \
+typedef struct ENV ENV;
+// DEFINE AST HERE!
+#define FOREACH_AST_TYPE(AST_TYPE) \
+    AST_TYPE(AST_NUMBER, <number>, { long value; }) \
+    AST_TYPE(AST_SYMBOL, <symbol>, { char* sym; })  \
+    AST_TYPE(AST_BUILTIN, <builtin>, { void ( *call )(); })  \
+    AST_TYPE(AST_FUNC, <func>, { ENV* env; char* argName; AST *body; })  \
+    AST_TYPE(AST_SEXPR, <sexpr>, { AST* left; AST* right; })  \
+    AST_TYPE(AST_EXPR, <expr>, { AST* expr; })  \
 
-#define FOREACH_LINKAGE(LINKAGE) \
-    LINKAGE(QExport, export) \
-    LINKAGE(QThread, thread) \
-    LINKAGE(QSection, section) 
-    
-typedef enum Linkage {
-    FOREACH_LINKAGE(GENERATE_ENUM)
-} Linkage;
-
-static const char *Linkage_Str[] = {
-    "export",
-    "thread",
-    "section",
+enum AST_TYPE {
+    FOREACH_AST_TYPE(GENERATE_ENUM)
 };
 
-typedef enum QType {
-    FOREACH_Q_TYPE(GENERATE_ENUM)
-} QType;
-
-static const char *QType_Str[] = {
-    FOREACH_Q_TYPE(GENERATE_STRING)
-};
-
-
-enum BIOP { PLUS, MINUS, MUL, DIV };
-
-typedef struct ARG ARG;
-struct ARG {
-    enum QType tag;
-    union {
-        int32_t Qword;
-        int64_t Qlong;
-        float_t Qsingle;
-        double_t Qdouble;
-    } val;
-    char* name;
-};
-
-typedef struct PARAM PARAM;
-struct PARAM {
-    enum QType tag;
-    union {
-        int32_t Qword;
-        int64_t Qlong;
-        float_t Qsingle;
-        double_t Qdouble;
-    } val;
+static const char *AST_TYPE_STR[] = {
+    FOREACH_AST_TYPE(GENERATE_STRING)
 };
 
 // AST
 typedef struct AST AST;
-typedef struct AST_EXPR AST_EXPR_t;
-typedef struct AST_SEXPR AST_SEXPR_t;
-typedef struct AST_NUMBER AST_NUMBER_t;
-typedef struct AST_BI_OP AST_BI_OP_t;
-typedef struct AST_FUNC_DEF AST_FUNC_DEF_t;
+FOREACH_AST_TYPE(GENERATE_TYPEDEF)
 struct AST {
-    enum {
-        AST_NUMBER,
-        AST_BI_OP,
-        AST_SEXPR,
-        AST_EXPR,
-        AST_CALL,
-        AST_FUNC_DEF,
-        AST_ASSIGN
-    } tag;
+    enum AST_TYPE tag;
     union {
-        struct AST_NUMBER { int64_t number; } AST_NUMBER;
-        struct AST_BI_OP { AST *left; AST *right; enum BIOP op; } AST_BI_OP;
-        struct AST_SEXPR { AST_EXPR_t **children; } AST_SEXPR;
-        struct AST_EXPR { AST *func; AST *left; AST *right; } AST_EXPR;
-        struct AST_CALL { char* name; ARG *args; } AST_CALL;
-        struct AST_FUNC_DEF { Linkage linkage; ARG *args; size_t argc; char* name; enum QType ret_type; AST **body; size_t bodyc; } AST_FUNC_DEF;
-        struct AST_ASSIGN { AST_EXPR_t *node; } AST_ASSIGN;
+        FOREACH_AST_TYPE(GENERATE_STRUCT)
     } data;
 };
 AST *ast_new(AST ast);
-ARG *arg_new(ARG ast);
-PARAM *param_new(PARAM p);
-void ast_print(AST *ast);
-void ast_emit_qbe(char* file, AST *ast);
-void AST_NUMBER_print(AST *ast);
+void ast_print(AST *ast, FILE* fd, unsigned int lvl);
+void *ast_eval(ENV *env, AST *ast);
+AST *ast_eval_(ENV *env, AST *ast);
+#define ast_call(env, builtin, ...) builtin(##__VA_ARGS__ )
+#define AST_PRINT(ast, fd, ...) ast_print(ast, fd, (0, ##__VA_ARGS__ ))
+#define PRINT_INDENT 4
 
 #define AST_NEW(tag, ...) \
     ast_new((AST){tag, {.tag=(struct tag){__VA_ARGS__}}})
 
-#define ARG_NEW(tag, name, ...) \
-    arg_new((ARG){tag, {.name = name, .tag=(tag){__VA_ARGS__}}})
 
-#define PARAM_NEW(tag, ...) \
-    param_new((PARAM){tag, {.tag=(struct tag){__VA_ARGS__}}})
+struct ENV {
+    ENV *par;
+    char **sym;
+    AST **val;
+};
 
 
+ENV *env_create();
+void env_bind(ENV *e, AST *atom, char* sym);
+void env_bind_(ENV *e, void ( *atom )(), char* sym);
+AST *env_get(ENV *e, char* sym);
 
 // AST end

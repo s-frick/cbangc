@@ -5,47 +5,31 @@
 
 #include "ast.h"
 
-/* 
-
-function w $add(w %a, w %b) {
-@start
-	%c =w add %a, %b
-	ret %c
+int add(int x, int y) {
+	return x + y;
 }
-
-export function w $main() {
-@start
-	%r =w call $add(w 1, w 1)
-	call $printf(1 $fmt, ..., w %r)
-	ret 0
-}
-data $fmt = { b "One and one make %d!\n", b 0 }
-
- * */
 
 int main(void) {
 	printf("Build AST.\n");
 
-	AST body[1];
-	body[0] = *AST_NEW(AST_BI_OP, AST_NEW(AST_NUMBER, 4), AST_NEW(AST_NUMBER, 6), PLUS);
-	AST* root = AST_NEW(AST_FUNC_DEF, QExport, NULL, 0, "main", Qword, (AST**)body, 1);
-	ast_print(root);
 
-	AST* expr;
-	PARAM *params = malloc(sizeof(PARAM) * 2);
-	params[0] = ( PARAM ){ .tag = Qword, .val = 5 };
-	params[1] = ( PARAM ){ .tag = Qword, .val = 10 };
-	expr = AST_NEW(AST_EXPR, "add", 2, params);
-	ast_print(root);
-	printf("PRINT EXPR\n");
-	ast_print(expr);
+/* 
+(+ (5 6))
+ * */
+	AST *call = AST_NEW(AST_SEXPR, 
+		     AST_NEW(AST_SYMBOL, "+"), 
+		     AST_NEW(AST_SEXPR, 
+			AST_NEW(AST_NUMBER, 5), 
+			AST_NEW(AST_NUMBER, 6)));
 
 
-	char* filename = "build/test.ssa";
-	printf("Emit QBE file %s.\n",filename);
+	ENV *env = env_create();
+	env_bind(env, AST_NEW(AST_BUILTIN, (void (*)())add), "+");
 
-	ast_emit_qbe(filename, root);
+	AST *res = ast_eval_(env, call);
 
-	printf("-----------------\n");
+	printf("res: %li", res->data.AST_NUMBER.value);
+	printf("END PRINT\n");
+
 	return 0;
 }

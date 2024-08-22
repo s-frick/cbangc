@@ -4,7 +4,7 @@
 build: clean
 	@ mkdir build && gcc -std=c11 -Wall -Wextra -Wswitch -Werror=switch -pedantic-errors main.c q_ast.c ast.c -o build/cbangc && echo 'Compilation successful.\nC! Compiler v0.0.1\nRun it with ./build/cbangc\n-----------------\n'
 run: clean
-	@mkdir build && gcc -std=c11 -Wall -Wextra -Wswitch -Werror=switch -pedantic-errors main.c q_ast.c ast.c -o build/cbangc && ./build/cbangc
+	@mkdir build && gcc -std=c11 -Wall -Wextra -Wswitch main.c array.c ast.c -o build/main && ./build/main
 
 clean:
 	@rm -rf build
